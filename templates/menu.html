@@ -62,7 +62,7 @@
         .order-btn { background-color: #ccc; color: #fff; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: not-allowed; transition: background-color 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .order-btn.enabled { background-color: var(--primary-color); cursor: pointer; }
 
-        /* 購物車面板 */
+        /* 購物車面板 (Shopping Cart Panel) */
         .cart-panel { position: fixed; bottom: -100%; left: 0; width: 100%; background: #fff; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.15); transition: bottom 0.3s ease-in-out; z-index: 1100; max-height: 75vh; display: flex; flex-direction: column; }
         .cart-panel.open { bottom: 0; }
         .cart-panel-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -164,7 +164,6 @@
         // 【重要】已自動為您填入 LIFF ID
         const myLiffId = '2010175679-0g4MxhQV'; 
 
-        // ★ 核心升級：cart 物件現在以「品項ID + 口味組合」作為 Key，獨立計算！
         let cart = {}; 
         let currentCategory = '';
         let baseMenuData = {};
@@ -293,7 +292,6 @@
                 "其他/冷凍": [
                     { id: "o01", name: "蘿蔔糕 (小)", price: 35 },
                     { id: "o02", name: "蘿蔔糕 (大)", price: 50 },
-                    // ★ 新增 Custom Qty 類型，讓鍋貼跟熱狗可以「自訂每份幾顆」
                     { id: "o03", name: "鍋貼/煎餃", price: 5, type: "custom_qty", unit: "顆" },
                     { id: "o18", name: "熱狗", price: 5, type: "custom_qty", unit: "條" },
                     { id: "o04", name: "薯餅", price: 20, note: "需等8-10分鐘" },
@@ -346,7 +344,6 @@
             currentCategory = catName;
         }
 
-        // 輔助函式：根據 ID 反查品項與分類
         function findItemById(itemId) {
             for (let cat in baseMenuData) {
                 let found = baseMenuData[cat].find(i => i.id === itemId);
@@ -355,7 +352,6 @@
             return { itemData: null, category: '' };
         }
 
-        // 核心價格計算邏輯
         function calculateCurrentPrice(itemData, category) {
             let price = itemData.price;
             if (category === "蛋餅類") {
@@ -368,7 +364,6 @@
                 const size = document.querySelector(`input[name="size-${itemData.id}"]:checked`).value;
                 price += (size === '大杯') ? 5 : 0; 
             } else if (itemData.type === "custom_qty") {
-                // 如果是鍋貼/熱狗，價格 = 單價 * 輸入的數量
                 let qty = parseInt(document.getElementById(`custom-qty-${itemData.id}`).value);
                 if (isNaN(qty) || qty < 1) qty = 1;
                 price = price * qty;
@@ -431,7 +426,6 @@
                         ${toastFlavors.map((f, idx) => `<label><input type="radio" name="f2-${item.id}" value="${f}" ${idx===1?'checked':''} onchange="updateItemOption('${item.id}')"> ${f}</label>`).join('')}
                     </div>`;
             } else if (item.type === "custom_qty") {
-                // ★ 新增：鍋貼與熱狗的客製化數量介面
                 optionsHtml = `
                     <div class="flavor-label">每份包含幾${item.unit}：</div>
                     <div class="options-group">
@@ -440,7 +434,6 @@
                     </div>`;
             }
 
-            // 修改 Stepper 右側的文字為「幾份」如果是 custom_qty 的話
             let stepperHtml = `
                 <div class="stepper">
                     ${item.type === "custom_qty" ? `<span style="font-size:0.9rem; color:#888; margin-right:5px;">要點幾份:</span>` : ''}
@@ -463,12 +456,10 @@
             return card;
         }
 
-        // ★ 核心升級：產生專屬的 Cart Key (品項ID ||| 選擇的組合)
         function getCartKey(itemData, cat) {
             return `${itemData.id}|||${getCurrentOptionString(itemData, cat)}`;
         }
 
-        // 讀取當前畫面選項的字串
         function getCurrentOptionString(itemData, cat) {
             const id = itemData.id;
             
@@ -495,7 +486,6 @@
             return '';
         }
 
-        // 當使用者改變選項 (例如切換成巧克力口味、或更改鍋貼數量)
         function updateItemOption(itemId) {
             const { itemData, category } = findItemById(itemId);
             if (!itemData) return;
@@ -504,7 +494,6 @@
             let newPrice = calculateCurrentPrice(itemData, category);
             priceDisplay.textContent = `$${newPrice}`;
 
-            // ★ 找出切換後的組合，在購物車裡目前有幾份，並更新到畫面上！
             const targetCartKey = getCartKey(itemData, category);
             const countSpan = document.getElementById(`count-${itemId}`);
             const minusBtn = document.getElementById(`minus-${itemId}`);
@@ -514,7 +503,6 @@
             if (minusBtn) minusBtn.disabled = (currentCountInCart === 0);
         }
 
-        // 點擊卡片上的加號減號
         function updateQuantity(itemId, change) {
             const { itemData, category } = findItemById(itemId);
             if (!itemData) return;
@@ -539,7 +527,6 @@
                 };
             }
 
-            // 更新畫面 Stepper
             const countSpan = document.getElementById(`count-${itemId}`);
             const minusBtn = document.getElementById(`minus-${itemId}`);
             if (countSpan) {
@@ -551,7 +538,6 @@
             renderCartPanel(); 
         }
 
-        // 專門給購物車面板用的更新數量函式 (因為購物車面板傳入的是 cartKey)
         function updateQuantityFromCart(cartKey, change) {
             if (!cart[cartKey]) return;
             let newCount = cart[cartKey].count + change;
@@ -562,12 +548,10 @@
                 cart[cartKey].count = newCount;
             }
 
-            // 同步更新主畫面的 Stepper (如果該品項的該組合剛好在畫面上)
             let itemId = cartKey.split('|||')[0]; 
             const { itemData, category } = findItemById(itemId);
             if (itemData) {
                 const currentUiCartKey = getCartKey(itemData, category);
-                // 只有當畫面上選擇的組合等於剛被修改的購物車組合時，才更新數字
                 if (currentUiCartKey === cartKey) {
                     const countSpan = document.getElementById(`count-${itemId}`);
                     const minusBtn = document.getElementById(`minus-${itemId}`);
@@ -585,7 +569,6 @@
         function removeFromCart(cartKey) {
             delete cart[cartKey];
             
-            // 同步主畫面 Stepper
             let itemId = cartKey.split('|||')[0]; 
             const { itemData, category } = findItemById(itemId);
             if (itemData) {
@@ -619,6 +602,8 @@
                 totalItemsSpan.textContent = `查看購物車 ▼`;
                 totalItemsSpan.style.color = '#888';
                 totalItemsSpan.style.fontWeight = 'normal';
+                
+                // ★ 修復：當購物車清空時，確保已經打開的面板可以成功關閉
                 const panel = document.getElementById('cart-panel');
                 if (panel && panel.classList.contains('open')) toggleCartPanel();
             }
@@ -633,14 +618,18 @@
             }
         }
 
+        // --- 購物車面板控制 ---
         function toggleCartPanel() {
-            if (Object.keys(cart).length === 0) return; 
             const panel = document.getElementById('cart-panel');
             const backdrop = document.getElementById('backdrop');
+
+            // ★ 修復核心：如果面板已經是打開的狀態，不論購物車有沒有東西，都一定要能關閉！
             if (panel.classList.contains('open')) {
                 panel.classList.remove('open');
                 backdrop.classList.remove('open');
             } else {
+                // 面板是關閉的，且購物車為空時，不允許打開
+                if (Object.keys(cart).length === 0) return; 
                 renderCartPanel();
                 panel.classList.add('open');
                 backdrop.classList.add('open');
@@ -740,7 +729,6 @@
                 grandTotal += subtotal;
                 const optionStr = item.option ? ` (${item.option})` : '';
                 
-                // 極簡排版： - 品項 x 數量  $金額
                 msgData.push(`- ${item.name}${optionStr} x ${item.count}  $${subtotal}`);
             }
 
